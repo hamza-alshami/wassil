@@ -1,6 +1,6 @@
 # WASSIL — وصّل
 
-**وصّل – وين طلبي؟** تطبيق عربي لمتابعة الطلبات وتفاصيلها. يدعم عرض آخر نسخة محفوظة من الطلبات عند تعذر الوصول إلى MockAPI.
+**وصّل – وين طلبي؟** تطبيق Flutter عربي لمتابعة الطلبات وتفاصيلها. يعرض بيانات الطلبات وحالة التوصيل، ويحتفظ بآخر نسخة ناجحة محلياً لعرضها عند تعذر الوصول إلى MockAPI.
 
 ## Overview
 
@@ -21,11 +21,11 @@ WASSIL is a small Flutter customer app for viewing orders, delivery status, orde
 
 - Flutter and Dart (`^3.11.0` SDK constraint).
 - Riverpod (`flutter_riverpod`) for presentation state.
-- connectivity_plus for current network checks and foreground connectivity changes.
+- `connectivity_plus` for network-interface checks and foreground connectivity changes.
 - Dio for HTTP requests.
-- sqflite and path for SQLite persistence.
-- sqflite_common_ffi for isolated in-memory SQLite repository tests.
-- google_fonts with IBM Plex Sans Arabic.
+- `sqflite` and `path` for SQLite persistence.
+- `sqflite_common_ffi` for isolated in-memory SQLite repository tests.
+- `google_fonts` with IBM Plex Sans Arabic.
 - Flutter Material icons and localization delegates.
 
 Lucide Icons are not currently a dependency; the app uses Flutter Material icons.
@@ -50,16 +50,16 @@ lib/
 │   │   ├── entities/            # Order and nested value objects
 │   │   └── repositories/        # Repository contract and result metadata
 │   └── presentation/
-│       ├── pages/               # Orders and order details screens
-│       ├── view_models/         # Riverpod AsyncNotifier and providers
-│       └── widgets/             # Cards, badges, and state widgets
+│       ├── pages/                # Orders and order details screens
+│       ├── view_models/          # Riverpod AsyncNotifier and providers
+│       └── widgets/              # Cards, badges, and state widgets
 └── main.dart                    # Application entry point
 
 test/
 └── features/orders/
-    ├── data/models/             # JSON model tests
-    ├── data/repositories/       # Repository and SQLite tests
-    └── presentation/            # ViewModel and widget tests
+    ├── data/models/              # JSON model tests
+    ├── data/repositories/        # Repository and SQLite tests
+    └── presentation/             # ViewModel, timeline, and widget tests
 ```
 
 ## Setup and run
@@ -70,7 +70,7 @@ Install Flutter and Android tooling, then fetch packages:
 flutter pub get
 ```
 
-Create `dart_defines.local.json` in the project root using the ignored local file format:
+Create a local file named `dart_defines.local.json` in the project root:
 
 ```json
 {
@@ -78,7 +78,7 @@ Create `dart_defines.local.json` in the project root using the ignored local fil
 }
 ```
 
-The local file is excluded by `.gitignore`. Do not commit it or place the key in Dart source. The example template is `dart_defines.example.json` and contains no real key.
+The local file is excluded by `.gitignore`. Do not commit it or place the key in Dart source. There is currently no committed `dart_defines.example.json` template; create the local file using the format above.
 
 In VS Code, select **Wassel (local MockAPI)** from `.vscode/launch.json`; it passes the local define file when starting Flutter. Alternatively run:
 
@@ -142,11 +142,14 @@ The connectivity plugin reports network interfaces, not guaranteed Internet acce
 
 Tests use fake Dio responses and the FFI SQLite database; they do not require internet access. The repository test also verifies that remote orders are sorted newest first before they are cached.
 
+The current test suite contains **31 test declarations across five test files**:
+
 ```sh
 flutter test test/features/orders/data/models/order_model_test.dart
 flutter test test/features/orders/data/repositories/orders_repository_test.dart
 flutter test test/features/orders/presentation/view_models/orders_view_model_test.dart
 flutter test test/features/orders/presentation/orders_page_test.dart
+flutter test test/features/orders/presentation/order_progress_timeline_test.dart
 flutter analyze
 flutter test
 ```
@@ -164,4 +167,4 @@ The repository tests use an in-memory database and close it in `tearDown`, so ea
 
 ## Project status
 
-The orders list, order details, MockAPI integration, refresh interaction, and SQLite offline fallback are implemented. The test suite is organized across model, repository, ViewModel, and widget responsibilities and currently contains 25 tests. MockAPI is configured with five Arabic order records (ORD-1001 through ORD-1005); validate that each API-provided total matches its line items before using the records as business data.
+The orders list, order details, MockAPI integration, refresh interaction, and SQLite offline fallback are implemented. MockAPI is configured with five Arabic order records (ORD-1001 through ORD-1005). Validate that each API-provided total matches its line items before using the records as business data.
