@@ -10,7 +10,7 @@ class DioClient {
   ///
   /// This lets the repository fall back to SQLite when the app is offline.
   static Dio create({String? apiKey}) {
-    final configuredApiKey = apiKey ?? _apiKey;
+    final configuredApiKey = (apiKey ?? _apiKey).trim();
     final headers = <String, String>{'Accept': 'application/json'};
     if (configuredApiKey.isNotEmpty) {
       headers['x-api-key'] = configuredApiKey;

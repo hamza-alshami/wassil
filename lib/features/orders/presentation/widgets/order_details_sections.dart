@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart' show NumberFormat;
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/order.dart';
 
 class OrderItemsSection extends StatelessWidget {
@@ -288,14 +288,4 @@ class OrderSectionTitle extends StatelessWidget {
   }
 }
 
-String formatYemeniRial(double amount) {
-  return '${NumberFormat('#,##0.##', 'ar').format(amount)} ر.ي';
-}
-
-String itemsCountLabel(int count) => switch (count) {
-  0 => 'لا توجد أصناف',
-  1 => 'صنف واحد',
-  2 => 'صنفان',
-  < 11 => '$count أصناف',
-  _ => '$count صنفًا',
-};
+// formatYemeniRial and itemsCountLabel live in core/utils/formatters.dart

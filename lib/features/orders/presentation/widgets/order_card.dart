@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/order.dart';
 import 'order_status_badge.dart';
 
@@ -78,7 +78,7 @@ class OrderCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _formatYemeniRial(order.total),
+                        formatYemeniRial(order.total),
                         maxLines: 1,
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: AppTheme.primary,
@@ -123,7 +123,5 @@ class OrderCard extends StatelessWidget {
     return MaterialLocalizations.of(context).formatMediumDate(date);
   }
 
-  String _formatYemeniRial(double amount) {
-    return '${NumberFormat('#,##0.##', 'ar').format(amount)} ر.ي';
-  }
+  // formatYemeniRial lives in core/utils/formatters.dart
 }

@@ -108,12 +108,19 @@ class OrdersViewModel extends AsyncNotifier<OrdersSnapshot> {
   Future<void> _handleConnectionChange(bool hasNetwork) async {
     final previousConnection = _lastHasNetwork;
     _lastHasNetwork = hasNetwork;
+
+    // First event ever: only refresh if we're offline and have no data yet.
     if (previousConnection == null) {
       if (!hasNetwork && state.value == null) await refresh();
       return;
     }
+
+    // No real change — nothing to do.
     if (previousConnection == hasNetwork) return;
 
+    // Connection restored: refresh to load fresh data.
+    // If a refresh was already in flight when we came back online, the network
+    // might have flipped again before it finished — do a second pass to be sure.
     if (hasNetwork) {
       final hadRefreshInFlight = _refreshInFlight != null;
       await refresh();
@@ -121,6 +128,7 @@ class OrdersViewModel extends AsyncNotifier<OrdersSnapshot> {
       return;
     }
 
+    // Connection lost: refresh so the UI reflects the offline state.
     await refresh();
   }
 

@@ -58,13 +58,17 @@ class OrdersRepositoryImpl implements OrdersRepository {
       );
     } on DioException catch (error) {
       final isOffline = error.response == null;
+      final hasApiKeyHeader = error.requestOptions.headers.keys.any(
+        (header) => header.toString().toLowerCase() == 'x-api-key',
+      );
       debugPrint(
         'Orders API refresh failed: ${error.type}, '
-        'statusCode=${error.response?.statusCode ?? 'no response'}',
+        'statusCode=${error.response?.statusCode ?? 'no response'}, '
+        'apiKeyHeaderPresent=$hasApiKeyHeader',
       );
       final cachedOrders = await _cachedSnapshot(
         isOffline: isOffline,
-        refreshFailure: _refreshFailure(error),
+        refreshFailure: _refreshFailure(error, hasApiKeyHeader),
         statusCode: error.response?.statusCode,
       );
       if (cachedOrders != null) return cachedOrders;
@@ -101,8 +105,12 @@ class OrdersRepositoryImpl implements OrdersRepository {
     );
   }
 
-  OrdersRefreshFailure _refreshFailure(DioException error) {
+  OrdersRefreshFailure _refreshFailure(
+    DioException error,
+    bool hasApiKeyHeader,
+  ) {
     return switch (error.response?.statusCode) {
+      401 when !hasApiKeyHeader => OrdersRefreshFailure.missingApiKey,
       401 => OrdersRefreshFailure.unauthorized,
       403 => OrdersRefreshFailure.forbidden,
       404 => OrdersRefreshFailure.endpointNotFound,

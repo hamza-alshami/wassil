@@ -22,12 +22,7 @@ class OrdersLocalDataSource {
       await transaction.delete('order_timeline');
       await transaction.delete('orders');
 
-      for (
-        var orderPosition = 0;
-        orderPosition < orders.length;
-        orderPosition++
-      ) {
-        final order = orders[orderPosition];
+      for (final (orderPosition, order) in orders.indexed) {
         await transaction.insert('orders', {
           'order_number': order.orderNumber,
           'position': orderPosition,
@@ -38,12 +33,7 @@ class OrdersLocalDataSource {
           'address': order.address,
         });
 
-        for (
-          var itemPosition = 0;
-          itemPosition < order.items.length;
-          itemPosition++
-        ) {
-          final item = order.items[itemPosition];
+        for (final (itemPosition, item) in order.items.indexed) {
           await transaction.insert('order_items', {
             'order_number': order.orderNumber,
             'position': itemPosition,
@@ -53,12 +43,7 @@ class OrdersLocalDataSource {
           });
         }
 
-        for (
-          var stepPosition = 0;
-          stepPosition < order.timeline.length;
-          stepPosition++
-        ) {
-          final step = order.timeline[stepPosition];
+        for (final (stepPosition, step) in order.timeline.indexed) {
           await transaction.insert('order_timeline', {
             'order_number': order.orderNumber,
             'position': stepPosition,

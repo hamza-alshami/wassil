@@ -76,10 +76,21 @@ class AppDatabase {
   }
 
   /// Closes the current connection. The next access opens it again.
+  ///
+  /// Waits for any in-progress open to complete before closing so the
+  /// database handle is never abandoned in the background.
   Future<void> close() async {
-    final database = _database;
+    final pendingOpen = _openingDatabase;
+    final alreadyOpen = _database;
     _database = null;
     _openingDatabase = null;
-    await database?.close();
+
+    // If an open was in flight, wait for it then close the resulting handle.
+    if (pendingOpen != null) {
+      final db = await pendingOpen.catchError((_) => null as Database?);
+      await db?.close();
+    } else {
+      await alreadyOpen?.close();
+    }
   }
 }

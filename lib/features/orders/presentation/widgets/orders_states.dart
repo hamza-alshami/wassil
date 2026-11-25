@@ -88,6 +88,8 @@ class OrdersConnectivityBanner extends StatelessWidget {
 
   String _cachedMessage(OrdersSnapshot snapshot) {
     final reason = switch (snapshot.refreshFailure) {
+      OrdersRefreshFailure.missingApiKey =>
+        'التطبيق لم يرسل مفتاح API. شغّله بإعداد وصّل المحلي',
       OrdersRefreshFailure.unauthorized => 'رفض الخادم مفتاح API (401)',
       OrdersRefreshFailure.forbidden => 'مفتاح API لا يملك صلاحية الوصول (403)',
       OrdersRefreshFailure.endpointNotFound => 'مسار الطلبات غير موجود (404)',

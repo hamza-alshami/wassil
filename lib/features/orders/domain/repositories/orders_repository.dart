@@ -25,6 +25,7 @@ class OrdersSnapshot {
 }
 
 enum OrdersRefreshFailure {
+  missingApiKey,
   unauthorized,
   forbidden,
   endpointNotFound,
