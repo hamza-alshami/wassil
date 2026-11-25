@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/order.dart';
+import '../utils/order_progress_stage_resolver.dart';
 
 class OrderProgressTimeline extends StatefulWidget {
   const OrderProgressTimeline({super.key, required this.order});
@@ -37,8 +38,8 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
   @override
   void initState() {
     super.initState();
-    _targetStage = _targetStageFor(widget.order);
-    _isCancelled = _isCancelledStatus(widget.order.status);
+    _targetStage = OrderProgressStageResolver.targetStageFor(widget.order);
+    _isCancelled = OrderProgressStageResolver.isCancelled(widget.order.status);
     _controller = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 720 * math.max(1, _targetStage)),
@@ -56,8 +57,12 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
   @override
   void didUpdateWidget(covariant OrderProgressTimeline oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final nextTargetStage = _targetStageFor(widget.order);
-    final nextIsCancelled = _isCancelledStatus(widget.order.status);
+    final nextTargetStage = OrderProgressStageResolver.targetStageFor(
+      widget.order,
+    );
+    final nextIsCancelled = OrderProgressStageResolver.isCancelled(
+      widget.order.status,
+    );
     if (oldWidget.order.orderNumber == widget.order.orderNumber &&
         _targetStage == nextTargetStage &&
         _isCancelled == nextIsCancelled) {
@@ -268,49 +273,6 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
     if (isDelivered || index < progress.floor()) return _StageState.complete;
     if (index == currentStage) return _StageState.current;
     return _StageState.future;
-  }
-
-  static bool _isCancelledStatus(String status) {
-    final normalized = status.trim().toLowerCase().replaceAll('-', '_');
-    return normalized == 'cancelled' ||
-        normalized == 'canceled' ||
-        normalized == 'ملغي';
-  }
-
-  static int _targetStageFor(Order order) {
-    final status = order.status.trim().toLowerCase().replaceAll('-', '_');
-    return switch (status) {
-      'pending' || 'قيد الانتظار' => 0,
-      'confirmed' || 'processing' || 'preparing' || 'قيد التجهيز' => 1,
-      'shipped' ||
-      'delivering' ||
-      'in_transit' ||
-      'on_the_way' ||
-      'out_for_delivery' ||
-      'في الطريق' => 2,
-      'delivered' || 'تم التوصيل' => 3,
-      'cancelled' || 'canceled' || 'ملغي' => 0,
-      _ => _targetFromTimeline(order.timeline),
-    };
-  }
-
-  static int _targetFromTimeline(List<OrderTimelineStep> timeline) {
-    final completedTitles = timeline
-        .where((step) => step.completed)
-        .map((step) => step.title.toLowerCase())
-        .toList(growable: false);
-    const stageWords = [
-      ['استلام', 'received'],
-      ['تأكيد', 'confirmed'],
-      ['تجهيز', 'prepared', 'preparing'],
-      ['توصيل', 'تسليم', 'delivery', 'delivered'],
-    ];
-    var reached = 0;
-    for (final words in stageWords) {
-      if (!completedTitles.any((title) => words.any(title.contains))) break;
-      reached++;
-    }
-    return (reached - 1).clamp(0, _labels.length - 1);
   }
 }
 

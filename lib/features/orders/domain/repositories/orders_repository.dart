@@ -12,12 +12,25 @@ class OrdersSnapshot {
     required this.isFromCache,
     required this.isOffline,
     this.savedAt,
+    this.refreshFailure,
+    this.refreshStatusCode,
   });
 
   final List<Order> orders;
   final bool isFromCache;
   final bool isOffline;
   final DateTime? savedAt;
+  final OrdersRefreshFailure? refreshFailure;
+  final int? refreshStatusCode;
+}
+
+enum OrdersRefreshFailure {
+  unauthorized,
+  forbidden,
+  endpointNotFound,
+  serverUnavailable,
+  invalidResponse,
+  other,
 }
 
 /// Indicates remote loading failed and no local snapshot was available.

@@ -12,6 +12,7 @@ class OrdersConnectivityBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCached = snapshot.isFromCache;
     final isOffline = isCached && snapshot.isOffline;
+    final refreshMessage = _cachedMessage(snapshot);
     final foreground = isOffline
         ? AppTheme.statusPending
         : isCached
@@ -25,7 +26,7 @@ class OrdersConnectivityBanner extends StatelessWidget {
     final message = isOffline
         ? 'أنت غير متصل بالإنترنت – تعرض آخر بيانات محفوظة'
         : isCached
-        ? 'تعذر التحديث — تعرض آخر نسخة محفوظة'
+        ? refreshMessage
         : 'متصل بالإنترنت';
 
     return AnimatedContainer(
@@ -38,7 +39,11 @@ class OrdersConnectivityBanner extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            isCached ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
+            isOffline
+                ? Icons.cloud_off_rounded
+                : isCached
+                ? Icons.sync_problem_rounded
+                : Icons.cloud_done_rounded,
             size: 18,
             color: foreground,
           ),
@@ -79,6 +84,22 @@ class OrdersConnectivityBanner extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _cachedMessage(OrdersSnapshot snapshot) {
+    final reason = switch (snapshot.refreshFailure) {
+      OrdersRefreshFailure.unauthorized => 'رفض الخادم مفتاح API (401)',
+      OrdersRefreshFailure.forbidden => 'مفتاح API لا يملك صلاحية الوصول (403)',
+      OrdersRefreshFailure.endpointNotFound => 'مسار الطلبات غير موجود (404)',
+      OrdersRefreshFailure.serverUnavailable => 'الخادم غير متاح مؤقتًا',
+      OrdersRefreshFailure.invalidResponse => 'استجابة الخادم غير متوافقة',
+      OrdersRefreshFailure.other =>
+        snapshot.refreshStatusCode == null
+            ? 'تعذر الاتصال بالخادم'
+            : 'فشل طلب الخادم (${snapshot.refreshStatusCode})',
+      null => 'تعذر التحديث',
+    };
+    return '$reason — تعرض آخر نسخة محفوظة';
   }
 }
 

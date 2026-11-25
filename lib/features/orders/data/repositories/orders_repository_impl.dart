@@ -33,16 +33,15 @@ class OrdersRepositoryImpl implements OrdersRepository {
 
     try {
       final ordersJson = await remoteDataSource.getOrders();
-      final orders = ordersJson
-          .map((json) => OrderModel.fromJson(json).order)
-          .toList()
-        ..sort((left, right) {
-          final leftDate = left.date;
-          final rightDate = right.date;
-          if (leftDate == null) return rightDate == null ? 0 : 1;
-          if (rightDate == null) return -1;
-          return rightDate.compareTo(leftDate);
-        });
+      final orders =
+          ordersJson.map((json) => OrderModel.fromJson(json).order).toList()
+            ..sort((left, right) {
+              final leftDate = left.date;
+              final rightDate = right.date;
+              if (leftDate == null) return rightDate == null ? 0 : 1;
+              if (rightDate == null) return -1;
+              return rightDate.compareTo(leftDate);
+            });
       final savedAt = DateTime.now().toUtc();
 
       try {
@@ -59,8 +58,14 @@ class OrdersRepositoryImpl implements OrdersRepository {
       );
     } on DioException catch (error) {
       final isOffline = error.response == null;
-      final cachedOrders = await localDataSource.getCachedOrders(
+      debugPrint(
+        'Orders API refresh failed: ${error.type}, '
+        'statusCode=${error.response?.statusCode ?? 'no response'}',
+      );
+      final cachedOrders = await _cachedSnapshot(
         isOffline: isOffline,
+        refreshFailure: _refreshFailure(error),
+        statusCode: error.response?.statusCode,
       );
       if (cachedOrders != null) return cachedOrders;
 
@@ -69,11 +74,42 @@ class OrdersRepositoryImpl implements OrdersRepository {
         statusCode: error.response?.statusCode,
       );
     } on FormatException {
-      final cachedOrders = await localDataSource.getCachedOrders(
+      final cachedOrders = await _cachedSnapshot(
         isOffline: false,
+        refreshFailure: OrdersRefreshFailure.invalidResponse,
       );
       if (cachedOrders != null) return cachedOrders;
       rethrow;
     }
+  }
+
+  Future<OrdersSnapshot?> _cachedSnapshot({
+    required bool isOffline,
+    OrdersRefreshFailure? refreshFailure,
+    int? statusCode,
+  }) async {
+    final cached = await localDataSource.getCachedOrders(isOffline: isOffline);
+    if (cached == null || refreshFailure == null) return cached;
+
+    return OrdersSnapshot(
+      orders: cached.orders,
+      isFromCache: true,
+      isOffline: isOffline,
+      savedAt: cached.savedAt,
+      refreshFailure: refreshFailure,
+      refreshStatusCode: statusCode,
+    );
+  }
+
+  OrdersRefreshFailure _refreshFailure(DioException error) {
+    return switch (error.response?.statusCode) {
+      401 => OrdersRefreshFailure.unauthorized,
+      403 => OrdersRefreshFailure.forbidden,
+      404 => OrdersRefreshFailure.endpointNotFound,
+      final statusCode when statusCode != null && statusCode >= 500 =>
+        OrdersRefreshFailure.serverUnavailable,
+      null => OrdersRefreshFailure.other,
+      _ => OrdersRefreshFailure.other,
+    };
   }
 }
