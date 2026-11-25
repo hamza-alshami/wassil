@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/order.dart';
 import 'order_status_badge.dart';
 
@@ -12,27 +13,36 @@ class OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final orderLabel = 'طلب #${order.orderNumber}';
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsetsDirectional.fromSTEB(17, 16, 16, 16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      'طلب #${order.orderNumber}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFF153D35),
-                        fontWeight: FontWeight.w700,
+                    child: Hero(
+                      tag: 'order-number-${order.orderNumber}',
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Text(
+                          orderLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: .1,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -40,30 +50,55 @@ class OrderCard extends StatelessWidget {
                   OrderStatusBadge(status: order.status),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 17),
               Row(
                 children: [
-                  const Icon(Icons.calendar_today_outlined, size: 17),
-                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 15,
+                    color: AppTheme.muted.withValues(alpha: .85),
+                  ),
+                  const SizedBox(width: 7),
                   Expanded(
                     child: Text(
                       _formatDate(context, order.date),
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF66736E),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.muted,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                  Text(
-                    _formatYemeniRial(order.total),
-                    style: textTheme.titleSmall?.copyWith(
-                      color: const Color(0xFF153D35),
-                      fontWeight: FontWeight.w700,
-                    ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatYemeniRial(order.total),
+                        maxLines: 1,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: AppTheme.ink,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'إجمالي الطلب',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppTheme.muted,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 5),
+                  const SizedBox(width: 10),
                   const Icon(
-                    Icons.chevron_left_rounded,
-                    color: Color(0xFF153D35),
+                    Icons.arrow_forward_rounded,
+                    size: 18,
+                    color: AppTheme.primary,
                   ),
                 ],
               ),
@@ -80,7 +115,6 @@ class OrderCard extends StatelessWidget {
   }
 
   String _formatYemeniRial(double amount) {
-    final formattedAmount = NumberFormat('#,##0.##', 'ar').format(amount);
-    return '$formattedAmount ر.ي';
+    return '${NumberFormat('#,##0.##', 'ar').format(amount)} ر.ي';
   }
 }

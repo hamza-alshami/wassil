@@ -37,8 +37,7 @@ void main() {
 
     expect(find.text('طلباتي'), findsOneWidget);
     expect(find.text('طلب #W-1042'), findsOneWidget);
-    expect(find.text('عدد الطلبات'), findsOneWidget);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('طلب واحد'), findsOneWidget);
     expect(find.text('متصل بالإنترنت'), findsOneWidget);
   });
 
@@ -59,7 +58,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(const Key('orders-loading')), findsOneWidget);
     response.complete(_snapshot());
     await tester.pumpAndSettle();
     expect(find.text('طلب #W-1042'), findsOneWidget);
@@ -108,6 +107,27 @@ void main() {
     expect(find.text('شارع الزبيري، صنعاء'), findsOneWidget);
   });
 
+  testWidgets('keeps the list and details usable on a narrow phone', (
+    tester,
+  ) async {
+    tester.view
+      ..physicalSize = const Size(320, 680)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    repository.enqueue(
+      () async => _snapshot(orderNumber: 'ORD-2026-11-VERY-LONG'),
+    );
+
+    await pumpApp(tester);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.textContaining('ORD-2026-11-VERY-LONG'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('رحلة الطلب'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows cached offline status in the connectivity banner', (
     tester,
   ) async {
@@ -132,7 +152,7 @@ void main() {
     await pumpApp(tester);
     expect(repository.calls, 1);
 
-    await tester.drag(find.byType(ListView), const Offset(0, 420));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, 420));
     await tester.pumpAndSettle();
 
     expect(repository.calls, 2);

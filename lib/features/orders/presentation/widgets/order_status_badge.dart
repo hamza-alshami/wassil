@@ -7,53 +7,103 @@ class OrderStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final normalizedStatus = status.trim().toLowerCase().replaceAll('-', '_');
-    final isDelivered =
-        normalizedStatus == 'delivered' || status == 'تم التوصيل';
-    final isCancelled =
-        normalizedStatus == 'cancelled' ||
-        normalizedStatus == 'canceled' ||
-        status == 'ملغي';
-    final label = switch (normalizedStatus) {
-      'pending' => 'قيد الانتظار',
-      'confirmed' => 'تم التأكيد',
-      'processing' || 'preparing' => 'قيد التجهيز',
+    final presentation = _StatusPresentation.from(status);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsetsDirectional.fromSTEB(10, 6, 11, 6),
+      decoration: BoxDecoration(
+        color: presentation.background,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: presentation.foreground.withValues(alpha: .1),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(presentation.icon, size: 14, color: presentation.foreground),
+          const SizedBox(width: 5),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: Text(
+              presentation.label,
+              key: ValueKey(presentation.label),
+              maxLines: 1,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: presentation.foreground,
+                fontWeight: FontWeight.w700,
+                height: 1.1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusPresentation {
+  const _StatusPresentation({
+    required this.label,
+    required this.icon,
+    required this.foreground,
+    required this.background,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color foreground;
+  final Color background;
+
+  factory _StatusPresentation.from(String rawStatus) {
+    final status = rawStatus.trim().toLowerCase().replaceAll('-', '_');
+    return switch (status) {
+      'pending' => const _StatusPresentation(
+        label: 'قيد الانتظار',
+        icon: Icons.schedule_rounded,
+        foreground: Color(0xFF94620B),
+        background: Color(0xFFFFF3D8),
+      ),
+      'confirmed' || 'processing' || 'preparing' => const _StatusPresentation(
+        label: 'قيد التجهيز',
+        icon: Icons.inventory_2_outlined,
+        foreground: Color(0xFF7956A5),
+        background: Color(0xFFF1EAF8),
+      ),
       'shipped' ||
       'delivering' ||
       'in_transit' ||
       'on_the_way' ||
-      'out_for_delivery' => 'في الطريق',
-      'delivered' => 'تم التوصيل',
-      'cancelled' || 'canceled' => 'ملغي',
-      _ =>
-        RegExp(r'[\u0600-\u06FF]').hasMatch(status)
-            ? status
-            : 'حالة غير معروفة',
+      'out_for_delivery' => const _StatusPresentation(
+        label: 'في الطريق',
+        icon: Icons.local_shipping_outlined,
+        foreground: Color(0xFF286B83),
+        background: Color(0xFFE7F3F6),
+      ),
+      'delivered' || 'تم التوصيل' => const _StatusPresentation(
+        label: 'تم التوصيل',
+        icon: Icons.check_circle_outline_rounded,
+        foreground: Color(0xFF28704B),
+        background: Color(0xFFE6F4EB),
+      ),
+      'cancelled' || 'canceled' || 'ملغي' => const _StatusPresentation(
+        label: 'ملغي',
+        icon: Icons.cancel_outlined,
+        foreground: Color(0xFFAD453C),
+        background: Color(0xFFFCEBE9),
+      ),
+      _ => _unknownStatus(rawStatus),
     };
-    final backgroundColor = isDelivered
-        ? const Color(0xFFE4F4EA)
-        : isCancelled
-        ? const Color(0xFFFCE8E6)
-        : const Color(0xFFFFF3D9);
-    final foregroundColor = isDelivered
-        ? const Color(0xFF246B45)
-        : isCancelled
-        ? const Color(0xFFB3261E)
-        : const Color(0xFF8A5A00);
+  }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: foregroundColor,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+  static _StatusPresentation _unknownStatus(String status) {
+    final isArabic = RegExp(r'[\u0600-\u06FF]').hasMatch(status);
+    return _StatusPresentation(
+      label: isArabic ? status : 'حالة غير معروفة',
+      icon: Icons.info_outline_rounded,
+      foreground: const Color(0xFF65756D),
+      background: const Color(0xFFEDF1EE),
     );
   }
 }

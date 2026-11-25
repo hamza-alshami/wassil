@@ -1,280 +1,504 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' show NumberFormat;
 
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/order.dart';
+import '../widgets/order_progress_timeline.dart';
 import '../widgets/order_status_badge.dart';
 
-class OrderDetailsPage extends StatelessWidget {
+class OrderDetailsPage extends StatefulWidget {
   const OrderDetailsPage({super.key, required this.order});
 
   final Order order;
 
   @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+  State<OrderDetailsPage> createState() => _OrderDetailsPageState();
+}
 
+class _OrderDetailsPageState extends State<OrderDetailsPage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _entryController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 820),
+  );
+  late final CurvedAnimation _heroEntry = _entry(0, .48);
+  late final CurvedAnimation _progressEntry = _entry(.14, .62);
+  late final CurvedAnimation _itemsEntry = _entry(.28, .78);
+  late final CurvedAnimation _addressEntry = _entry(.42, .94);
+  bool _entryStarted = false;
+
+  CurvedAnimation _entry(double begin, double end) => CurvedAnimation(
+    parent: _entryController,
+    curve: Interval(begin, end, curve: Curves.easeOutCubic),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_entryStarted) return;
+    _entryStarted = true;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _entryController.value = 1;
+    } else {
+      _entryController.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _heroEntry.dispose();
+    _progressEntry.dispose();
+    _itemsEntry.dispose();
+    _addressEntry.dispose();
+    _entryController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('تفاصيل الطلب')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 30),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
+          _SectionEntrance(
+            animation: _heroEntry,
+            child: _OrderHero(order: widget.order),
+          ),
+          const SizedBox(height: 24),
+          _SectionEntrance(
+            animation: _progressEntry,
+            child: OrderProgressTimeline(order: widget.order),
+          ),
+          const SizedBox(height: 25),
+          _SectionEntrance(
+            animation: _itemsEntry,
+            child: _ItemsSection(order: widget.order),
+          ),
+          const SizedBox(height: 25),
+          _SectionEntrance(
+            animation: _addressEntry,
+            child: _DeliverySection(order: widget.order),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionEntrance extends StatelessWidget {
+  const _SectionEntrance({required this.animation, required this.child});
+
+  static final Tween<Offset> _offset = Tween<Offset>(
+    begin: const Offset(0, .045),
+    end: Offset.zero,
+  );
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: _offset.animate(animation),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _OrderHero extends StatelessWidget {
+  const _OrderHero({required this.order});
+
+  final Order order;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = order.date == null
+        ? 'تاريخ غير متوفر'
+        : MaterialLocalizations.of(context).formatMediumDate(order.date!);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(25),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: AlignmentDirectional.topStart,
+            end: AlignmentDirectional.bottomEnd,
+            colors: [AppTheme.primaryDeep, Color(0xFF245548)],
+          ),
+        ),
+        child: Stack(
+          children: [
+            PositionedDirectional(
+              top: -48,
+              end: -24,
+              child: _HeroOrb(size: 148, opacity: .065),
+            ),
+            PositionedDirectional(
+              bottom: -74,
+              start: 90,
+              child: _HeroOrb(size: 178, opacity: .045),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
                     children: [
-                      Expanded(
+                      const Expanded(
                         child: Text(
-                          'طلب #${order.orderNumber}',
-                          style: textTheme.titleLarge?.copyWith(
-                            color: const Color(0xFF153D35),
-                            fontWeight: FontWeight.w700,
+                          'رقم الطلب',
+                          style: TextStyle(
+                            color: Color(0xFFC6D8CF),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                       OrderStatusBadge(status: order.status),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  _InfoRow(
-                    icon: Icons.calendar_today_outlined,
-                    label: 'تاريخ الطلب',
-                    value: _formatDate(context, order.date),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Text('مراحل التوصيل', style: textTheme.titleMedium),
-          const SizedBox(height: 10),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: order.timeline.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      child: Text('لا توجد مراحل توصيل متاحة.'),
-                    )
-                  : Column(
-                      children: [
-                        for (
-                          var index = 0;
-                          index < order.timeline.length;
-                          index++
-                        )
-                          _TimelineStep(
-                            step: order.timeline[index],
-                            isLast: index == order.timeline.length - 1,
-                          ),
-                      ],
-                    ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Text('الأصناف', style: textTheme.titleMedium),
-          const SizedBox(height: 10),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  if (order.items.isEmpty)
-                    const Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text('لا توجد أصناف متاحة.'),
-                    ),
-                  for (var index = 0; index < order.items.length; index++) ...[
-                    _OrderItemRow(item: order.items[index]),
-                    if (index < order.items.length - 1)
-                      const Divider(height: 22),
-                  ],
-                  const Divider(height: 26),
-                  Row(
-                    children: [
-                      const Expanded(
+                  const SizedBox(height: 9),
+                  Hero(
+                    tag: 'order-number-${order.orderNumber}',
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Directionality(
+                        textDirection: TextDirection.ltr,
                         child: Text(
-                          'الإجمالي',
-                          style: TextStyle(fontWeight: FontWeight.w700),
+                          order.orderNumber,
+                          textAlign: TextAlign.right,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: .25,
+                              ),
                         ),
                       ),
-                      Text(
-                        _formatYemeniRial(order.total),
-                        style: const TextStyle(
-                          color: Color(0xFF153D35),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Text('التوصيل إلى', style: textTheme.titleMedium),
-          const SizedBox(height: 10),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    order.customerName,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 17),
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Icon(
-                        Icons.location_on_outlined,
-                        size: 19,
-                        color: Color(0xFF66736E),
+                        Icons.calendar_today_outlined,
+                        size: 15,
+                        color: Color(0xFFC6D8CF),
                       ),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(order.address)),
+                      Text(
+                        date,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFFE4EEE9),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-
-  String _formatDate(BuildContext context, DateTime? date) {
-    if (date == null) return 'تاريخ غير متوفر';
-    return MaterialLocalizations.of(context).formatMediumDate(date);
-  }
-
-  String _formatYemeniRial(double amount) {
-    return '${NumberFormat('#,##0.##', 'ar').format(amount)} ر.ي';
-  }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+class _HeroOrb extends StatelessWidget {
+  const _HeroOrb({required this.size, required this.opacity});
 
-  final IconData icon;
-  final String label;
-  final String value;
+  final double size;
+  final double opacity;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: opacity)),
+        ),
+      ),
+    );
+  }
+}
+
+class _ItemsSection extends StatelessWidget {
+  const _ItemsSection({required this.order});
+
+  final Order order;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(icon, size: 18, color: const Color(0xFF66736E)),
-        const SizedBox(width: 8),
-        Text('$label: ', style: const TextStyle(color: Color(0xFF66736E))),
-        Expanded(child: Text(value)),
+        _SectionTitle(title: 'الأصناف', detail: '${order.items.length} منتجات'),
+        const SizedBox(height: 11),
+        Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(23),
+            border: Border.all(color: AppTheme.outline),
+          ),
+          child: Column(
+            children: [
+              if (order.items.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      'لا توجد أصناف متاحة.',
+                      style: TextStyle(color: AppTheme.muted),
+                    ),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(17, 4, 17, 5),
+                  child: Column(
+                    children: [
+                      for (var index = 0; index < order.items.length; index++)
+                        _OrderItemRow(
+                          item: order.items[index],
+                          index: index,
+                          isLast: index == order.items.length - 1,
+                        ),
+                    ],
+                  ),
+                ),
+              Container(
+                margin: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
+                padding: const EdgeInsetsDirectional.fromSTEB(14, 13, 14, 13),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F6F2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'الإجمالي',
+                        style: TextStyle(
+                          color: AppTheme.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _formatYemeniRial(order.total),
+                      textDirection: TextDirection.ltr,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
 class _OrderItemRow extends StatelessWidget {
-  const _OrderItemRow({required this.item});
+  const _OrderItemRow({
+    required this.item,
+    required this.index,
+    required this.isLast,
+  });
 
   final OrderItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.name,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'الكمية: ${item.quantity}',
-                style: const TextStyle(color: Color(0xFF66736E)),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(_formatYemeniRial(item.price * item.quantity)),
-      ],
-    );
-  }
-
-  String _formatYemeniRial(double amount) {
-    return '${NumberFormat('#,##0.##', 'ar').format(amount)} ر.ي';
-  }
-}
-
-class _TimelineStep extends StatelessWidget {
-  const _TimelineStep({required this.step, required this.isLast});
-
-  final OrderTimelineStep step;
+  final int index;
   final bool isLast;
 
   @override
   Widget build(BuildContext context) {
-    final color = step.completed
-        ? const Color(0xFF153D35)
-        : const Color(0xFFBCC8C2);
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 26,
-          child: Column(
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(
-                step.completed
-                    ? Icons.check_circle_rounded
-                    : Icons.radio_button_unchecked_rounded,
-                size: 19,
-                color: color,
-              ),
-              if (!isLast)
-                Container(
-                  width: 2,
-                  height: 32,
-                  margin: const EdgeInsets.symmetric(vertical: 3),
-                  color: step.completed
-                      ? const Color(0xFF9ACDB1)
-                      : const Color(0xFFE2E8E4),
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F6F2),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: Text(
+                  '${index + 1}',
+                  style: const TextStyle(
+                    color: AppTheme.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.ink,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${item.quantity} × ${_formatYemeniRial(item.price)} للوحدة',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppTheme.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _formatYemeniRial(item.price * item.quantity),
+                textDirection: TextDirection.ltr,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: AppTheme.ink,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 22, top: 1),
-            child: Text(
-              step.title,
-              style: TextStyle(
-                color: step.completed
-                    ? const Color(0xFF153D35)
-                    : const Color(0xFF66736E),
-                fontWeight: step.completed
-                    ? FontWeight.w600
-                    : FontWeight.normal,
-              ),
+          if (!isLast)
+            const Padding(
+              padding: EdgeInsetsDirectional.only(start: 41, top: 13),
+              child: Divider(height: 1, color: Color(0xFFF0F3F1)),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeliverySection extends StatelessWidget {
+  const _DeliverySection({required this.order});
+
+  final Order order;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle(title: 'عنوان التوصيل'),
+        const SizedBox(height: 11),
+        Container(
+          padding: const EdgeInsets.all(17),
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(23),
+            border: Border.all(color: AppTheme.outline),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppTheme.accent,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.location_on_outlined,
+                  color: AppTheme.primary,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      order.customerName,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.ink,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      order.address,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.muted,
+                        height: 1.55,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title, this.detail});
+
+  final String title;
+  final String? detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppTheme.ink,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        if (detail != null)
+          Text(
+            detail!,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: AppTheme.muted,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+String _formatYemeniRial(double amount) {
+  return '${NumberFormat('#,##0.##', 'ar').format(amount)} ر.ي';
 }

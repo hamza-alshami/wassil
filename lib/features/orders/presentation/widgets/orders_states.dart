@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/repositories/orders_repository.dart';
 
 class OrdersConnectivityBanner extends StatelessWidget {
@@ -9,34 +10,38 @@ class OrdersConnectivityBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOfflineCache = snapshot.isFromCache && snapshot.isOffline;
     final isCached = snapshot.isFromCache;
-    final backgroundColor = isOfflineCache
-        ? const Color(0xFFFFF3D9)
-        : const Color(0xFFDDF3E8);
-    final foregroundColor = isOfflineCache
-        ? const Color(0xFF805500)
-        : const Color(0xFF153D35);
-    final icon = isCached
-        ? Icons.cloud_off_outlined
-        : Icons.cloud_done_outlined;
-    final message = isOfflineCache
+    final isOffline = isCached && snapshot.isOffline;
+    final foreground = isOffline
+        ? const Color(0xFF8A5C12)
+        : isCached
+        ? const Color(0xFF54685C)
+        : AppTheme.primary;
+    final background = isOffline
+        ? const Color(0xFFFFF4DF)
+        : isCached
+        ? const Color(0xFFEDF1EE)
+        : AppTheme.accent;
+    final message = isOffline
         ? 'أنت غير متصل بالإنترنت – تعرض آخر بيانات محفوظة'
         : isCached
-        ? 'تعذر تحديث البيانات – تعرض آخر نسخة محفوظة'
+        ? 'تعذر التحديث — تعرض آخر نسخة محفوظة'
         : 'متصل بالإنترنت';
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 240),
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 14, 10),
       decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(14),
+        color: background,
+        borderRadius: BorderRadius.circular(15),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 19, color: foregroundColor),
+          Icon(
+            isCached ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
+            size: 18,
+            color: foreground,
+          ),
           const SizedBox(width: 9),
           Expanded(
             child: Column(
@@ -44,20 +49,116 @@ class OrdersConnectivityBanner extends StatelessWidget {
               children: [
                 Text(
                   message,
-                  style: TextStyle(
-                    color: foregroundColor,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: foreground,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 if (isCached) ...[
-                  const SizedBox(height: 3),
-                  const Text(
+                  const SizedBox(height: 2),
+                  Text(
                     'قد تكون البيانات قديمة.',
-                    style: TextStyle(color: Color(0xFF66736E), fontSize: 12),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(color: AppTheme.muted),
                   ),
                 ],
               ],
             ),
+          ),
+          if (isCached) ...[
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.info_outline_rounded,
+              size: 16,
+              color: AppTheme.muted,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class OrdersLoadingState extends StatefulWidget {
+  const OrdersLoadingState({super.key});
+
+  @override
+  State<OrdersLoadingState> createState() => _OrdersLoadingStateState();
+}
+
+class _OrdersLoadingStateState extends State<OrdersLoadingState>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmerController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1050),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      key: const Key('orders-loading'),
+      label: 'جارٍ تحميل الطلبات',
+      child: AnimatedBuilder(
+        animation: _shimmerController,
+        builder: (context, child) => Opacity(
+          opacity: .52 + (_shimmerController.value * .28),
+          child: child,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 2, 20, 28),
+          child: Column(
+            children: [
+              for (var index = 0; index < 3; index++) ...[
+                const _OrderSkeletonCard(),
+                if (index < 2) const SizedBox(height: 11),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderSkeletonCard extends StatelessWidget {
+  const _OrderSkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 112,
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppTheme.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              const _SkeletonLine(width: 112, height: 15),
+              const Spacer(),
+              _SkeletonLine(width: 78, height: 25, radius: 20),
+            ],
+          ),
+          Row(
+            children: const [
+              _SkeletonLine(width: 108, height: 12),
+              Spacer(),
+              _SkeletonLine(width: 82, height: 17),
+            ],
           ),
         ],
       ),
@@ -65,34 +166,71 @@ class OrdersConnectivityBanner extends StatelessWidget {
   }
 }
 
-class OrdersLoadingState extends StatelessWidget {
-  const OrdersLoadingState({super.key});
+class _SkeletonLine extends StatelessWidget {
+  const _SkeletonLine({
+    required this.width,
+    required this.height,
+    this.radius = 7,
+  });
+
+  final double width;
+  final double height;
+  final double radius;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: CircularProgressIndicator());
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8EEEA),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
   }
 }
 
 class OrdersEmptyState extends StatelessWidget {
-  const OrdersEmptyState({super.key, required this.onRefresh});
-
-  final Future<void> Function() onRefresh;
+  const OrdersEmptyState({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 100),
-          Icon(Icons.inbox_outlined, size: 52, color: Color(0xFF80918A)),
-          SizedBox(height: 16),
-          Center(child: Text('لا توجد طلبات حتى الآن')),
-          SizedBox(height: 8),
-          Center(child: Text('اسحب للأسفل لتحديث القائمة')),
-        ],
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 76,
+              height: 76,
+              decoration: const BoxDecoration(
+                color: AppTheme.accent,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.receipt_long_outlined,
+                size: 32,
+                color: AppTheme.primary,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'لا توجد طلبات حتى الآن',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'اسحب الشاشة للأسفل لتحديث القائمة',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -110,26 +248,52 @@ class OrdersErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.cloud_off_outlined,
-              size: 48,
-              color: Color(0xFF80918A),
-            ),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('إعادة المحاولة'),
-            ),
-          ],
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFCEBE9),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Icon(
+                  Icons.cloud_off_outlined,
+                  size: 30,
+                  color: Color(0xFFAD453C),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'لم نتمكن من تحميل الطلبات',
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.muted,
+                  height: 1.55,
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded, size: 19),
+                label: const Text('إعادة المحاولة'),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/order.dart';
 import '../../domain/repositories/orders_repository.dart';
 import '../view_models/orders_view_model.dart';
@@ -16,80 +17,61 @@ class OrdersPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ordersState = ref.watch(ordersViewModelProvider);
     final snapshot = ordersState.value;
-    final orders = snapshot?.orders ?? const <Order>[];
+    final content = ordersState.when<List<Widget>>(
+      data: (value) {
+        if (value.orders.isEmpty) {
+          return [
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: OrdersEmptyState(),
+            ),
+          ];
+        }
+        return [
+          SliverPadding(
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 2, 20, 28),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final order = value.orders[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 11),
+                  child: OrderCard(
+                    key: ValueKey(order.orderNumber),
+                    order: order,
+                    onTap: () => _openOrder(context, order),
+                  ),
+                );
+              }, childCount: value.orders.length),
+            ),
+          ),
+        ];
+      },
+      error: (error, _) => [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: OrdersErrorState(
+            message: _errorMessage(error),
+            onRetry: () => _refresh(ref),
+          ),
+        ),
+      ],
+      loading: () => [const SliverToBoxAdapter(child: OrdersLoadingState())],
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'وصّل',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
       body: SafeArea(
-        top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'طلباتي',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: const Color(0xFF153D35),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    'تابع طلباتك وحالة التوصيل',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF66736E),
-                    ),
-                  ),
-                  if (snapshot != null) ...[
-                    const SizedBox(height: 14),
-                    OrdersConnectivityBanner(snapshot: snapshot),
-                  ],
-                  const SizedBox(height: 18),
-                  _OrdersSummary(count: orders.length),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ordersState.when(
-                data: (snapshot) {
-                  final data = snapshot.orders;
-                  if (data.isEmpty) {
-                    return OrdersEmptyState(onRefresh: () => _refresh(ref));
-                  }
-                  return RefreshIndicator(
-                    onRefresh: () => _refresh(ref),
-                    child: ListView.separated(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                      itemCount: data.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final order = data[index];
-                        return OrderCard(
-                          order: order,
-                          onTap: () => _openOrder(context, order),
-                        );
-                      },
-                    ),
-                  );
-                },
-                error: (error, _) => OrdersErrorState(
-                  message: _errorMessage(error),
-                  onRetry: () => _refresh(ref),
-                ),
-                loading: () => const OrdersLoadingState(),
-              ),
-            ),
-          ],
+        child: RefreshIndicator.adaptive(
+          onRefresh: () => _refresh(ref),
+          color: AppTheme.primary,
+          backgroundColor: AppTheme.surface,
+          displacement: 34,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(child: _OrdersHeader(snapshot: snapshot)),
+              ...content,
+            ],
+          ),
         ),
       ),
     );
@@ -100,25 +82,47 @@ class OrdersPage extends ConsumerWidget {
   }
 
   void _openOrder(BuildContext context, Order order) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => OrderDetailsPage(order: order)),
+    Navigator.of(context).push<void>(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 320),
+        reverseTransitionDuration: const Duration(milliseconds: 250),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            OrderDetailsPage(order: order),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, .025),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      ),
     );
   }
 
   String _errorMessage(Object error) {
     debugPrint('Orders load failed: ${error.runtimeType}');
     if (error is FormatException) {
-      return 'تعذر قراءة بيانات الطلبات من الخادم.';
+      return 'وصلتنا بيانات غير مكتملة. اسحب للأسفل أو أعد المحاولة.';
     }
     if (error is OrdersUnavailableException) {
       if (error.isOffline) {
         return 'لا يوجد اتصال بالإنترنت ولا توجد طلبات محفوظة بعد. اتصل بالإنترنت ثم أعد المحاولة.';
       }
-      return 'تعذر تحميل الطلبات من الخادم${error.statusCode == null ? '' : ' (${error.statusCode})'}. أعد المحاولة.';
+      return 'تعذر تحميل الطلبات من الخادم${error.statusCode == null ? '' : ' (${error.statusCode})'}. حاول مجدداً.';
     }
     if (error is StateError ||
         error.toString().contains('MOCKAPI_KEY is missing')) {
-      return 'إعداد مفتاح API غير موجود. شغّل التطبيق باستخدام MOCKAPI_KEY.';
+      return 'إعداد مفتاح API غير موجود. شغّل التطبيق بإعداد المفتاح المحلي.';
     }
     if (error is DioException && error.response == null) {
       return switch (error.type) {
@@ -136,11 +140,11 @@ class OrdersPage extends ConsumerWidget {
     if (error is DioException) {
       switch (error.response?.statusCode) {
         case 401:
-          return 'رفض الخادم مفتاح API. تحقّق من MOCKAPI_KEY في إعداد التشغيل.';
+          return 'رفض الخادم مفتاح API. تحقّق من إعداد التشغيل المحلي.';
         case 403:
           return 'مفتاح API لا يملك صلاحية الوصول إلى هذا المشروع.';
         case 404:
-          return 'لم يُعثر على المسار /orders في MockAPI.';
+          return 'لم يُعثر على مسار الطلبات في MockAPI.';
       }
       return 'تعذر تحميل الطلبات (رمز الخطأ ${error.response?.statusCode ?? 'غير معروف'}).';
     }
@@ -148,39 +152,105 @@ class OrdersPage extends ConsumerWidget {
   }
 }
 
-class _OrdersSummary extends StatelessWidget {
-  const _OrdersSummary({required this.count});
+class _OrdersHeader extends StatelessWidget {
+  const _OrdersHeader({required this.snapshot});
 
-  final int count;
+  final OrdersSnapshot? snapshot;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFDDF3E8),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
+    final count = snapshot?.orders.length;
+    final countLabel = switch (count) {
+      null => null,
+      0 => 'لا توجد طلبات',
+      1 => 'طلب واحد',
+      2 => 'طلبان',
+      < 11 => '$count طلبات',
+      _ => '$count طلب',
+    };
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(22, 10, 22, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.receipt_long_outlined, color: Color(0xFF153D35)),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'عدد الطلبات',
-              style: TextStyle(
-                color: Color(0xFF153D35),
-                fontWeight: FontWeight.w600,
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.local_mall_outlined,
+                  size: 20,
+                  color: Colors.white,
+                ),
               ),
-            ),
+              const SizedBox(width: 10),
+              Text(
+                'وصّل',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -.3,
+                ),
+              ),
+              const Spacer(),
+              if (countLabel != null)
+                Container(
+                  padding: const EdgeInsetsDirectional.fromSTEB(10, 6, 10, 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: AppTheme.outline),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.receipt_long_outlined,
+                        size: 15,
+                        color: AppTheme.muted,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        countLabel,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: AppTheme.ink,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
+          const SizedBox(height: 25),
           Text(
-            '$count',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: const Color(0xFF153D35),
-              fontWeight: FontWeight.w700,
+            'طلباتي',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: AppTheme.ink,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+              letterSpacing: -.6,
             ),
           ),
+          const SizedBox(height: 5),
+          Text(
+            'كل تفاصيل طلباتك، في مكان واحد.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppTheme.muted,
+              height: 1.45,
+            ),
+          ),
+          if (snapshot != null) ...[
+            const SizedBox(height: 17),
+            OrdersConnectivityBanner(snapshot: snapshot!),
+          ],
         ],
       ),
     );
