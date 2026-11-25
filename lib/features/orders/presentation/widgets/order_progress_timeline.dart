@@ -7,9 +7,14 @@ import '../../domain/entities/order.dart';
 import '../utils/order_progress_stage_resolver.dart';
 
 class OrderProgressTimeline extends StatefulWidget {
-  const OrderProgressTimeline({super.key, required this.order});
+  const OrderProgressTimeline({
+    super.key,
+    required this.order,
+    this.onJourneyCompleted,
+  });
 
   final Order order;
+  final VoidCallback? onJourneyCompleted;
 
   @override
   State<OrderProgressTimeline> createState() => _OrderProgressTimelineState();
@@ -23,6 +28,12 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
     'تجهيز\nالطلب',
     'التوصيل',
   ];
+  static const _stageStatusLabels = [
+    'تم استلام طلبك',
+    'تم تأكيد الطلب',
+    'يتم الآن تجهيز الطلب',
+    'جاري التوصيل',
+  ];
   static const _icons = [
     Icons.receipt_long_rounded,
     Icons.verified_outlined,
@@ -33,6 +44,8 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
   late final AnimationController _controller;
   late int _targetStage;
   late bool _isCancelled;
+  late bool _isDelivered;
+  bool _completionNotified = false;
   bool _hasStarted = false;
 
   @override
@@ -40,10 +53,11 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
     super.initState();
     _targetStage = OrderProgressStageResolver.targetStageFor(widget.order);
     _isCancelled = OrderProgressStageResolver.isCancelled(widget.order.status);
+    _isDelivered = OrderProgressStageResolver.isDelivered(widget.order.status);
     _controller = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 720 * math.max(1, _targetStage)),
-    );
+    )..addStatusListener(_handleAnimationStatus);
   }
 
   @override
@@ -63,14 +77,20 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
     final nextIsCancelled = OrderProgressStageResolver.isCancelled(
       widget.order.status,
     );
+    final nextIsDelivered = OrderProgressStageResolver.isDelivered(
+      widget.order.status,
+    );
     if (oldWidget.order.orderNumber == widget.order.orderNumber &&
         _targetStage == nextTargetStage &&
-        _isCancelled == nextIsCancelled) {
+        _isCancelled == nextIsCancelled &&
+        _isDelivered == nextIsDelivered) {
       return;
     }
 
     _targetStage = nextTargetStage;
     _isCancelled = nextIsCancelled;
+    _isDelivered = nextIsDelivered;
+    _completionNotified = false;
     _controller
       ..stop()
       ..duration = Duration(milliseconds: 720 * math.max(1, _targetStage))
@@ -86,6 +106,17 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
       return;
     }
     _controller.forward();
+  }
+
+  void _handleAnimationStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed ||
+        !_isDelivered ||
+        _isCancelled ||
+        _completionNotified) {
+      return;
+    }
+    _completionNotified = true;
+    widget.onJourneyCompleted?.call();
   }
 
   @override
@@ -125,15 +156,11 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
                   animation: _controller,
                   builder: (context, _) {
                     final stage = _currentStage(_journeyProgress);
-                    final isDelivered =
-                        _normalizedStatus == 'delivered' &&
-                        _controller.isCompleted;
+                    final isDelivered = _isDelivered && _controller.isCompleted;
                     return AnimatedSwitcher(
                       duration: const Duration(milliseconds: 180),
                       child: Text(
-                        isDelivered
-                            ? 'اكتمل الطلب'
-                            : 'المرحلة ${stage + 1} من 4',
+                        isDelivered ? 'تم التوصيل' : _stageStatusLabels[stage],
                         key: ValueKey('${stage}_$isDelivered'),
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: AppTheme.muted,
@@ -146,22 +173,23 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
             ],
           ),
           const SizedBox(height: AppTheme.space20),
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) {
-              final progress = _journeyProgress;
-              final stage = _currentStage(progress);
-              final isDelivered =
-                  _normalizedStatus == 'delivered' && _controller.isCompleted;
-              final fillFraction = (progress / 3).clamp(0.0, 1.0);
+          // LayoutBuilder is the outer wrapper so constraints are only
+          // recalculated when the widget resizes — not on every anim frame.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final trackInset = constraints.maxWidth / 8;
+              final trackWidth = math.max(
+                0.0,
+                constraints.maxWidth - (trackInset * 2),
+              );
 
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  final trackInset = constraints.maxWidth / 8;
-                  final trackWidth = math.max(
-                    0.0,
-                    constraints.maxWidth - (trackInset * 2),
-                  );
+              return AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) {
+                  final progress = _journeyProgress;
+                  final stage = _currentStage(progress);
+                  final isDelivered = _isDelivered && _controller.isCompleted;
+                  final fillFraction = (progress / 3).clamp(0.0, 1.0);
                   final indicatorStart =
                       (trackInset + (trackWidth * fillFraction) - 7)
                           .clamp(0.0, math.max(0.0, constraints.maxWidth - 14))
@@ -205,7 +233,9 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
                             ),
                           ),
                         ),
-                        if (!_isCancelled && _targetStage > 0)
+                        if (!_isCancelled &&
+                            _targetStage > 0 &&
+                            !_controller.isCompleted)
                           PositionedDirectional(
                             start: indicatorStart,
                             top: 11,
@@ -252,9 +282,6 @@ class _OrderProgressTimelineState extends State<OrderProgressTimeline>
   }
 
   double get _journeyProgress => _targetStage * _controller.value;
-
-  String get _normalizedStatus =>
-      widget.order.status.trim().toLowerCase().replaceAll('-', '_');
 
   int _currentStage(double progress) {
     if (_isCancelled) return 0;

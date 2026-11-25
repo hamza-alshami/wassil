@@ -61,29 +61,46 @@ class _StatusPresentation {
   factory _StatusPresentation.from(String rawStatus) {
     final status = rawStatus.trim().toLowerCase().replaceAll('-', '_');
     return switch (status) {
-      'pending' => const _StatusPresentation(
-        label: 'قيد الانتظار',
+      'pending' ||
+      'received' ||
+      'order_received' ||
+      'قيد الانتظار' ||
+      'تم استلام الطلب' ||
+      'تم استلام طلبك' => const _StatusPresentation(
+        label: 'تم استلام طلبك',
         icon: Icons.schedule_rounded,
         foreground: AppTheme.statusPending,
         background: AppTheme.statusPendingSurface,
       ),
-      'confirmed' || 'processing' || 'preparing' => const _StatusPresentation(
-        label: 'قيد التجهيز',
+      'confirmed' ||
+      'تم التأكيد' ||
+      'تم تأكيد الطلب' => const _StatusPresentation(
+        label: 'تم تأكيد الطلب',
+        icon: Icons.verified_outlined,
+        foreground: AppTheme.statusActive,
+        background: AppTheme.statusActiveSurface,
+      ),
+      'processing' || 'preparing' || 'قيد التجهيز' => const _StatusPresentation(
+        label: 'يتم الآن تجهيز الطلب',
         icon: Icons.inventory_2_outlined,
-        foreground: AppTheme.statusPending,
-        background: AppTheme.statusPendingSurface,
+        foreground: AppTheme.statusActive,
+        background: AppTheme.statusActiveSurface,
       ),
       'shipped' ||
       'delivering' ||
       'in_transit' ||
       'on_the_way' ||
-      'out_for_delivery' => const _StatusPresentation(
-        label: 'في الطريق',
+      'out_for_delivery' ||
+      'في الطريق' ||
+      'جاري التوصيل' => const _StatusPresentation(
+        label: 'جاري التوصيل',
         icon: Icons.local_shipping_outlined,
         foreground: AppTheme.statusActive,
         background: AppTheme.statusActiveSurface,
       ),
-      'delivered' || 'تم التوصيل' => const _StatusPresentation(
+      'delivered' ||
+      'تم التوصيل' ||
+      'تم توصيل الطلب' => const _StatusPresentation(
         label: 'تم التوصيل',
         icon: Icons.check_circle_outline_rounded,
         foreground: AppTheme.statusDelivered,

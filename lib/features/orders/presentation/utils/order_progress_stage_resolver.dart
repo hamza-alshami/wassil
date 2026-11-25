@@ -11,18 +11,32 @@ abstract final class OrderProgressStageResolver {
         normalized == 'ملغي';
   }
 
+  static bool isDelivered(String status) {
+    final normalized = _normalize(status);
+    return normalized == 'delivered' ||
+        normalized == 'تم التوصيل' ||
+        normalized == 'تم توصيل الطلب';
+  }
+
   static int targetStageFor(Order order) {
     final status = _normalize(order.status);
     return switch (status) {
-      'pending' || 'قيد الانتظار' => 0,
-      'confirmed' || 'processing' || 'preparing' || 'قيد التجهيز' => 1,
+      'pending' ||
+      'received' ||
+      'order_received' ||
+      'قيد الانتظار' ||
+      'تم استلام الطلب' ||
+      'تم استلام طلبك' => 0,
+      'confirmed' || 'تم التأكيد' || 'تم تأكيد الطلب' => 1,
+      'processing' || 'preparing' || 'قيد التجهيز' => 2,
       'shipped' ||
       'delivering' ||
       'in_transit' ||
       'on_the_way' ||
       'out_for_delivery' ||
-      'في الطريق' => 2,
-      'delivered' || 'تم التوصيل' => lastStageIndex,
+      'في الطريق' ||
+      'جاري التوصيل' => lastStageIndex,
+      'delivered' || 'تم التوصيل' || 'تم توصيل الطلب' => lastStageIndex,
       'cancelled' || 'canceled' || 'ملغي' => 0,
       _ => _targetFromTimeline(order.timeline),
     };
@@ -45,7 +59,7 @@ abstract final class OrderProgressStageResolver {
       reached++;
     }
 
-    return (reached - 1).clamp(0, lastStageIndex);
+    return reached.clamp(0, lastStageIndex);
   }
 
   static String _normalize(String value) =>

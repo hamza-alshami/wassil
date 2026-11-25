@@ -27,6 +27,34 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
   late final CurvedAnimation _itemsEntry = _entry(.4, .8);
   late final CurvedAnimation _totalEntry = _entry(.55, .95);
   bool _entryStarted = false;
+  bool _successDialogShown = false;
+
+  void _showDeliverySuccessDialog() {
+    if (!mounted || _successDialogShown) return;
+    _successDialogShown = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          icon: const Icon(
+            Icons.check_circle_rounded,
+            color: AppTheme.statusDelivered,
+            size: 48,
+          ),
+          title: const Text('تم توصيل طلبك بنجاح'),
+          content: const Text('شكرًا لاختيارك وصّل.'),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('حسنًا'),
+            ),
+          ],
+        ),
+      );
+    });
+  }
 
   CurvedAnimation _entry(double begin, double end) => CurvedAnimation(
     parent: _entryController,
@@ -77,7 +105,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
           _SectionEntrance(
             key: const ValueKey('details-progress'),
             animation: _progressEntry,
-            child: OrderProgressTimeline(order: widget.order),
+            child: OrderProgressTimeline(
+              order: widget.order,
+              onJourneyCompleted: _showDeliverySuccessDialog,
+            ),
           ),
           const SizedBox(height: AppTheme.space24),
           _SectionEntrance(
