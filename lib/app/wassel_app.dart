@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/theme/app_theme.dart';
+import '../features/orders/presentation/pages/orders_page.dart';
 
 class WasselApp extends StatelessWidget {
   const WasselApp({super.key});
@@ -15,22 +16,7 @@ class WasselApp extends StatelessWidget {
       supportedLocales: const [Locale('ar')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: AppTheme.light,
-      home: const _SetupPlaceholder(),
-    );
-  }
-}
-
-/// Temporary launch screen for the foundation phase.
-/// The orders experience will be added in a later phase.
-class _SetupPlaceholder extends StatelessWidget {
-  const _SetupPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('وصّل – وين طلبي؟'),
-      ),
+      home: const OrdersPage(),
     );
   }
 }
