@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
+
 class OrderStatusBadge extends StatelessWidget {
   const OrderStatusBadge({super.key, required this.status});
 
@@ -62,14 +64,14 @@ class _StatusPresentation {
       'pending' => const _StatusPresentation(
         label: 'قيد الانتظار',
         icon: Icons.schedule_rounded,
-        foreground: Color(0xFF94620B),
-        background: Color(0xFFFFF3D8),
+        foreground: AppTheme.statusPending,
+        background: AppTheme.statusPendingSurface,
       ),
       'confirmed' || 'processing' || 'preparing' => const _StatusPresentation(
         label: 'قيد التجهيز',
         icon: Icons.inventory_2_outlined,
-        foreground: Color(0xFF7956A5),
-        background: Color(0xFFF1EAF8),
+        foreground: AppTheme.statusPending,
+        background: AppTheme.statusPendingSurface,
       ),
       'shipped' ||
       'delivering' ||
@@ -78,20 +80,20 @@ class _StatusPresentation {
       'out_for_delivery' => const _StatusPresentation(
         label: 'في الطريق',
         icon: Icons.local_shipping_outlined,
-        foreground: Color(0xFF286B83),
-        background: Color(0xFFE7F3F6),
+        foreground: AppTheme.statusActive,
+        background: AppTheme.statusActiveSurface,
       ),
       'delivered' || 'تم التوصيل' => const _StatusPresentation(
         label: 'تم التوصيل',
         icon: Icons.check_circle_outline_rounded,
-        foreground: Color(0xFF28704B),
-        background: Color(0xFFE6F4EB),
+        foreground: AppTheme.statusDelivered,
+        background: AppTheme.statusDeliveredSurface,
       ),
       'cancelled' || 'canceled' || 'ملغي' => const _StatusPresentation(
         label: 'ملغي',
         icon: Icons.cancel_outlined,
-        foreground: Color(0xFFAD453C),
-        background: Color(0xFFFCEBE9),
+        foreground: AppTheme.statusCancelled,
+        background: AppTheme.statusCancelledSurface,
       ),
       _ => _unknownStatus(rawStatus),
     };

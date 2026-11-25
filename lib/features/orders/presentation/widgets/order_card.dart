@@ -20,13 +20,14 @@ class OrderCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(17, 16, 16, 16),
+          padding: const EdgeInsetsDirectional.fromSTEB(17, 16, 17, 15),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Hero(
@@ -38,27 +39,29 @@ class OrderCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.titleSmall?.copyWith(
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: .1,
+                            color: AppTheme.ink,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: .05,
                           ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppTheme.space8),
                   OrderStatusBadge(status: order.status),
                 ],
               ),
-              const SizedBox(height: 17),
+              const SizedBox(height: AppTheme.space12),
+              const Divider(height: 1),
+              const SizedBox(height: AppTheme.space12),
               Row(
                 children: [
                   Icon(
                     Icons.calendar_today_outlined,
-                    size: 15,
-                    color: AppTheme.muted.withValues(alpha: .85),
+                    size: 14,
+                    color: AppTheme.muted,
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: AppTheme.space8),
                   Expanded(
                     child: Text(
                       _formatDate(context, order.date),
@@ -66,11 +69,10 @@ class OrderCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppTheme.muted,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
@@ -79,8 +81,8 @@ class OrderCard extends StatelessWidget {
                         _formatYemeniRial(order.total),
                         maxLines: 1,
                         style: theme.textTheme.titleSmall?.copyWith(
-                          color: AppTheme.ink,
-                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primary,
+                          fontWeight: FontWeight.w800,
                           height: 1.2,
                         ),
                       ),
@@ -89,16 +91,23 @@ class OrderCard extends StatelessWidget {
                         'إجمالي الطلب',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: AppTheme.muted,
-                          fontSize: 10,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(width: 10),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 18,
-                    color: AppTheme.primary,
+                  const SizedBox(width: AppTheme.space12),
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 17,
+                      color: AppTheme.primary,
+                    ),
                   ),
                 ],
               ),

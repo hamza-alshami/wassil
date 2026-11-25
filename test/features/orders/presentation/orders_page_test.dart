@@ -107,6 +107,42 @@ void main() {
     expect(find.text('شارع الزبيري، صنعاء'), findsOneWidget);
   });
 
+  testWidgets('prioritizes delivery address before journey and items', (
+    tester,
+  ) async {
+    repository.enqueue(() async => _snapshot());
+    await pumpApp(tester);
+    await tester.tap(find.text('طلب #W-1042'));
+    await tester.pumpAndSettle();
+
+    final headerY = tester
+        .getTopLeft(find.byKey(const ValueKey('details-order-header')))
+        .dy;
+    final addressY = tester
+        .getTopLeft(find.byKey(const ValueKey('details-delivery-address')))
+        .dy;
+    final progressY = tester
+        .getTopLeft(find.byKey(const ValueKey('details-progress')))
+        .dy;
+
+    expect(headerY, lessThan(addressY));
+    expect(addressY, lessThan(progressY));
+
+    await tester.drag(find.byType(ListView), const Offset(0, -420));
+    await tester.pumpAndSettle();
+    final progressAfterScrollY = tester
+        .getTopLeft(find.byKey(const ValueKey('details-progress')))
+        .dy;
+    final itemsY = tester
+        .getTopLeft(find.byKey(const ValueKey('details-items')))
+        .dy;
+    final totalY = tester
+        .getTopLeft(find.byKey(const ValueKey('details-total')))
+        .dy;
+    expect(progressAfterScrollY, lessThan(itemsY));
+    expect(itemsY, lessThan(totalY));
+  });
+
   testWidgets('keeps the list and details usable on a narrow phone', (
     tester,
   ) async {

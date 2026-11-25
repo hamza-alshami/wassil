@@ -21,10 +21,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
     vsync: this,
     duration: const Duration(milliseconds: 820),
   );
-  late final CurvedAnimation _heroEntry = _entry(0, .48);
-  late final CurvedAnimation _progressEntry = _entry(.14, .62);
-  late final CurvedAnimation _itemsEntry = _entry(.28, .78);
-  late final CurvedAnimation _addressEntry = _entry(.42, .94);
+  late final CurvedAnimation _heroEntry = _entry(0, .36);
+  late final CurvedAnimation _addressEntry = _entry(.08, .44);
+  late final CurvedAnimation _progressEntry = _entry(.1, .56);
+  late final CurvedAnimation _itemsEntry = _entry(.4, .8);
+  late final CurvedAnimation _totalEntry = _entry(.55, .95);
   bool _entryStarted = false;
 
   CurvedAnimation _entry(double begin, double end) => CurvedAnimation(
@@ -47,9 +48,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
   @override
   void dispose() {
     _heroEntry.dispose();
+    _addressEntry.dispose();
     _progressEntry.dispose();
     _itemsEntry.dispose();
-    _addressEntry.dispose();
+    _totalEntry.dispose();
     _entryController.dispose();
     super.dispose();
   }
@@ -62,23 +64,32 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
         padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 30),
         children: [
           _SectionEntrance(
+            key: const ValueKey('details-order-header'),
             animation: _heroEntry,
             child: _OrderHero(order: widget.order),
           ),
-          const SizedBox(height: 24),
           _SectionEntrance(
+            key: const ValueKey('details-delivery-address'),
+            animation: _addressEntry,
+            child: _DeliverySection(order: widget.order),
+          ),
+          const SizedBox(height: AppTheme.space24),
+          _SectionEntrance(
+            key: const ValueKey('details-progress'),
             animation: _progressEntry,
             child: OrderProgressTimeline(order: widget.order),
           ),
-          const SizedBox(height: 25),
+          const SizedBox(height: AppTheme.space24),
           _SectionEntrance(
+            key: const ValueKey('details-items'),
             animation: _itemsEntry,
             child: _ItemsSection(order: widget.order),
           ),
-          const SizedBox(height: 25),
+          const SizedBox(height: AppTheme.space16),
           _SectionEntrance(
-            animation: _addressEntry,
-            child: _DeliverySection(order: widget.order),
+            key: const ValueKey('details-total'),
+            animation: _totalEntry,
+            child: _OrderTotalSection(order: widget.order),
           ),
         ],
       ),
@@ -87,7 +98,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage>
 }
 
 class _SectionEntrance extends StatelessWidget {
-  const _SectionEntrance({required this.animation, required this.child});
+  const _SectionEntrance({
+    super.key,
+    required this.animation,
+    required this.child,
+  });
 
   static final Tween<Offset> _offset = Tween<Offset>(
     begin: const Offset(0, .045),
@@ -121,7 +136,7 @@ class _OrderHero extends StatelessWidget {
         : MaterialLocalizations.of(context).formatMediumDate(order.date!);
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(25),
+      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
       child: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -243,14 +258,13 @@ class _ItemsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SectionTitle(title: 'الأصناف', detail: '${order.items.length} منتجات'),
-        const SizedBox(height: 11),
+        _SectionTitle(
+          title: 'الأصناف',
+          detail: _itemsCountLabel(order.items.length),
+        ),
+        const SizedBox(height: AppTheme.space12),
         Container(
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(23),
-            border: Border.all(color: AppTheme.outline),
-          ),
+          decoration: AppTheme.surfaceDecoration(),
           child: Column(
             children: [
               if (order.items.isEmpty)
@@ -278,39 +292,62 @@ class _ItemsSection extends StatelessWidget {
                     ],
                   ),
                 ),
-              Container(
-                margin: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 12),
-                padding: const EdgeInsetsDirectional.fromSTEB(14, 13, 14, 13),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F6F2),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'الإجمالي',
-                        style: TextStyle(
-                          color: AppTheme.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      _formatYemeniRial(order.total),
-                      textDirection: TextDirection.ltr,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _OrderTotalSection extends StatelessWidget {
+  const _OrderTotalSection({required this.order});
+
+  final Order order;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsetsDirectional.fromSTEB(18, 17, 18, 17),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F2EC),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        border: Border.all(color: const Color(0xFFD6E7DC)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'إجمالي الطلب',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.space4),
+                Text(
+                  _itemsCountLabel(order.items.length),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: AppTheme.muted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppTheme.space12),
+          Text(
+            _formatYemeniRial(order.total),
+            textDirection: TextDirection.ltr,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppTheme.primary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -415,11 +452,7 @@ class _DeliverySection extends StatelessWidget {
         const SizedBox(height: 11),
         Container(
           padding: const EdgeInsets.all(17),
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(23),
-            border: Border.all(color: AppTheme.outline),
-          ),
+          decoration: AppTheme.surfaceDecoration(),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -428,7 +461,7 @@ class _DeliverySection extends StatelessWidget {
                 height: 42,
                 decoration: BoxDecoration(
                   color: AppTheme.accent,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppTheme.controlRadius),
                 ),
                 child: const Icon(
                   Icons.location_on_outlined,
@@ -502,3 +535,11 @@ class _SectionTitle extends StatelessWidget {
 String _formatYemeniRial(double amount) {
   return '${NumberFormat('#,##0.##', 'ar').format(amount)} ر.ي';
 }
+
+String _itemsCountLabel(int count) => switch (count) {
+  0 => 'لا توجد أصناف',
+  1 => 'صنف واحد',
+  2 => 'صنفان',
+  < 11 => '$count أصناف',
+  _ => '$count صنفًا',
+};

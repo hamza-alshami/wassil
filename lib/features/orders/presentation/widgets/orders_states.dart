@@ -13,12 +13,12 @@ class OrdersConnectivityBanner extends StatelessWidget {
     final isCached = snapshot.isFromCache;
     final isOffline = isCached && snapshot.isOffline;
     final foreground = isOffline
-        ? const Color(0xFF8A5C12)
+        ? AppTheme.statusPending
         : isCached
-        ? const Color(0xFF54685C)
+        ? AppTheme.muted
         : AppTheme.primary;
     final background = isOffline
-        ? const Color(0xFFFFF4DF)
+        ? AppTheme.statusPendingSurface
         : isCached
         ? const Color(0xFFEDF1EE)
         : AppTheme.accent;
@@ -139,7 +139,7 @@ class _OrderSkeletonCard extends StatelessWidget {
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.all(color: AppTheme.outline),
       ),
       child: Column(
@@ -260,13 +260,13 @@ class OrdersErrorState extends StatelessWidget {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFCEBE9),
+                  color: AppTheme.statusCancelledSurface,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Icon(
                   Icons.cloud_off_outlined,
                   size: 30,
-                  color: Color(0xFFAD453C),
+                  color: AppTheme.statusCancelled,
                 ),
               ),
               const SizedBox(height: 18),

@@ -171,41 +171,51 @@ class _OrdersHeader extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(22, 10, 22, 20),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 21),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: AppTheme.primary,
-                  borderRadius: BorderRadius.circular(13),
+                  color: AppTheme.accent,
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
                   Icons.local_mall_outlined,
-                  size: 20,
-                  color: Colors.white,
+                  size: 21,
+                  color: AppTheme.primary,
                 ),
               ),
-              const SizedBox(width: 10),
-              Text(
-                'وصّل',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: AppTheme.primary,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -.3,
-                ),
+              const SizedBox(width: AppTheme.space12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'وصّل',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    'متابعة الطلبات',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppTheme.muted,
+                    ),
+                  ),
+                ],
               ),
               const Spacer(),
               if (countLabel != null)
                 Container(
-                  padding: const EdgeInsetsDirectional.fromSTEB(10, 6, 10, 6),
+                  padding: const EdgeInsetsDirectional.fromSTEB(11, 7, 11, 7),
                   decoration: BoxDecoration(
                     color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: AppTheme.outline),
                   ),
                   child: Row(
@@ -213,15 +223,15 @@ class _OrdersHeader extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.receipt_long_outlined,
-                        size: 15,
-                        color: AppTheme.muted,
+                        size: 16,
+                        color: AppTheme.primary,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: AppTheme.space8),
                       Text(
                         countLabel,
                         style: theme.textTheme.labelMedium?.copyWith(
-                          color: AppTheme.ink,
-                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primary,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -229,26 +239,37 @@ class _OrdersHeader extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 25),
-          Text(
-            'طلباتي',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              color: AppTheme.ink,
-              fontWeight: FontWeight.w800,
-              height: 1.2,
-              letterSpacing: -.6,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            'كل تفاصيل طلباتك، في مكان واحد.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppTheme.muted,
-              height: 1.45,
-            ),
+          const SizedBox(height: AppTheme.space24),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'طلباتي',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: AppTheme.ink,
+                        fontWeight: FontWeight.w800,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.space4),
+                    Text(
+                      'تابع طلباتك وحالة التوصيل',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.muted,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           if (snapshot != null) ...[
-            const SizedBox(height: 17),
+            const SizedBox(height: AppTheme.space16),
             OrdersConnectivityBanner(snapshot: snapshot!),
           ],
         ],
